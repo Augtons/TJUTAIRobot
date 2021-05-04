@@ -73,13 +73,21 @@ int redCount = 0;
 int qingCount = 0;
 int heiCount = 0;
 
-int wanna = 0;//1 放宝 2 捡宝
+
 int depositState = 0;//1 正在 2 结束
+
 int behavior = 0;
+enum behaviors{
+    FIND_HONE = 1,
+    OUT_HOME = 2,
+    FIND_SUPER_OBJ = 3,
+};
 
 void mycode();
+void gotoLocation(int x, int y);
 void behavior_FindHome();
 void behavior_OutHome();
+void behavior_FindSuperObj();
 
 
 int between(int val, int start, int end);
@@ -139,9 +147,14 @@ int between(int val, int start, int end);
 #define rightZhaoZe between(CSRight_R, 130, 185) && between(CSRight_G, 135, 186) && between(CSRight_B, 180, 255)
 #define zhaoze (leftZhaoZe && rightZhaoZe)
 
+#define leftChuJie (CSLeft_R == 206 && CSLeft_G == 217 && CSLeft_B == 255)
+#define rightChuJie (CSRight_R == 206 && CSRight_G == 217 && CSRight_B == 255)
+#define chuJie (leftChuJie && rightChuJie)
+
 //空地
 #define isEmpty (!(frontHasBuilding)) && (!(leftHasBuilding)) && (!(rightHasBuilding)) && (!(leftXianjing)) && (!(rightXianjing)) && \
         !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut)
+
 
 DLL_EXPORT void SetGameID(int GameID)
 {
@@ -257,10 +270,10 @@ void Game1()
         }
         if (behavior != 0){
             switch (behavior) {
-                case 1://满载，找存包区
+                case FIND_HONE://满载，找存包区
                     behavior_FindHome();
                     break;
-                case 2://存包结束，离开存包区
+                case OUT_HOME://存包结束，离开存包区
                     behavior_OutHome();
                     break;
             }
@@ -284,6 +297,7 @@ DLL_EXPORT void OnTimer()
             //LED_1=0;
             break;
         case 1:
+            //gotoLocation(56, 178);
             Game1();
             break;
         default:
@@ -294,14 +308,14 @@ DLL_EXPORT void OnTimer()
 int between(int val, int start, int end){
     return val >= min(start, end) && val <= max(start, end);
 }
+
+int isNear(int px, int py){
+    return abs(PositionY - py) <= 5 || abs(PositionX - px) <= 5;
+}
+
 void setWheel(int left, int right){
-    if (leftZhaoZe || rightZhaoZe){
-        WheelLeft = left != 0 && right != 0 ? 10 * left : 600;
-        WheelRight = left != 0 && right != 0 ? 10 * right : 600;
-    } else{
-        WheelLeft = left;
-        WheelRight = right;
-    }
+    WheelLeft = left;
+    WheelRight = right;
 }
 void deposit(){
     setWheel(0, 0);
@@ -332,9 +346,9 @@ void turnTo270(){
         } else if (between(abs(Compass - 270), 120, 60)){
             setWheel(-20, 20);
         } else if (between(abs(Compass - 270), 60, 20)){
-            setWheel(-10, 10);
+            setWheel(-8, 8);
         } else{
-            setWheel(-5, 5);
+            setWheel(-3, 3);
         }
     } else{
         if (between(Compass, 90, 30)){
@@ -342,9 +356,9 @@ void turnTo270(){
         } else if (Compass > 330 || Compass < 30){
             setWheel(20, -20);
         } else if (between(Compass, 330, 290)){
-            setWheel(10, -10);
+            setWheel(8, -8);
         } else{
-            setWheel(5, -5);
+            setWheel(3, -3);
         }
     }
 }
@@ -360,9 +374,9 @@ void turnTo90(){
         } else if (between(abs(Compass - 90), 120, 60)){
             setWheel(20, -20);
         } else if (between(abs(Compass - 90), 60, 20)){
-            setWheel(10, -10);
+            setWheel(8, -8);
         } else{
-            setWheel(5, -5);
+            setWheel(3, -3);
         }
     } else{
         if (between(Compass, 270, 330)){
@@ -370,9 +384,9 @@ void turnTo90(){
         } else if (Compass > 330 || Compass < 30){
             setWheel(-20, 20);
         } else if (between(Compass, 30, 70)){
-            setWheel(-10, 10);
+            setWheel(-8, 8);
         } else{
-            setWheel(-5, 5);
+            setWheel(-3, 3);
         }
     }
 }
@@ -388,9 +402,9 @@ void turnTo180(){
         } else if (between(abs(180 - Compass), 120, 60)){
             setWheel(20, -20);
         } else if (between(abs(180 - Compass), 60, 20)){
-            setWheel(10, -10);
+            setWheel(8, -8);
         } else{
-            setWheel(5, -5);
+            setWheel(3, -3);
         }
     } else{
         if (between(abs(180 - Compass), 180, 120)){
@@ -398,9 +412,9 @@ void turnTo180(){
         } else if (between(abs(180 - Compass), 120, 60)){
             setWheel(-20, 20);
         } else if (between(abs(180 - Compass), 60, 20)){
-            setWheel(-10, 10);
+            setWheel(-8, 8);
         } else{
-            setWheel(-5, 5);
+            setWheel(-3, 3);
         }
     }
 }
@@ -416,9 +430,9 @@ void turnTo0(){
         } else if (between(abs(360 - Compass), 120, 60)){
             setWheel(-20, 20);
         } else if (between(abs(360 - Compass), 60, 20)){
-            setWheel(-10, 10);
+            setWheel(-8, 8);
         } else{
-            setWheel(-5, 5);
+            setWheel(-3, 3);
         }
     } else {
         if (between(Compass, 180, 120)){
@@ -426,51 +440,54 @@ void turnTo0(){
         } else if (between(Compass, 120, 60)){
             setWheel(20, -20);
         } else if (between(Compass, 60, 20)){
-            setWheel(10, -10);
+            setWheel(8, -8);
         } else{
-            setWheel(5, -5);
+            setWheel(3, -3);
         }
     }
 }
 
-void gotoLocation(int x, int y){
-    int neededDirect = 5;
-    if(abs(y - PositionY) > neededDirect){
-        if (y > PositionY){
-            if (Compass < 3 || Compass>357) {
-                turnTo0();
-            } else{
+void gotoPositionX(int x){
+    if (abs(x - PositionX) > 5){
+        if (PositionX < x){
+            if (!between(Compass, 267, 273)){
+                turnTo270();
+            } else {
                 setWheel(60, 60);
             }
         } else {
-            if (!between(Compass, 177, 183)) {
-                turnTo180();
-            } else{
-                setWheel(60, 60);
-            }
-        }
-    }else if (abs(x - PositionX) > neededDirect){
-        if (x < PositionX){
-            if (!between(Compass, 87, 93)) {
+            if (!between(Compass, 93, 87)){
                 turnTo90();
-            } else{
-                setWheel(60, 60);
-            }
-        } else{
-            if (!between(Compass, 267, 273)) {
-                turnTo270();
             } else{
                 setWheel(60, 60);
             }
         }
     } else{
-        if (wanna == 1){
-            neededY = 0;
-            neededX = 0;
+        setWheel(0, 0);
+    }
+}
+void gotoPositionY(int y){
+    if (abs(y - PositionX) > 5){
+        if (PositionY < y){
+            if (!(Compass >= 357 || Compass <= 3)){
+                turnTo0();
+            } else{
+                setWheel(60, 60);
+            }
         } else{
-            //todo 捡下一个宝藏等
+            if (!between(Compass, 183, 177)){
+                turnTo180();
+            } else setWheel(60, 60);
         }
-        wanna = 0;
+    } else{
+        setWheel(0, 0);
+    }
+}
+void gotoLocation(int x, int y){
+    if (abs(y - PositionY) > 5){
+        gotoPositionY(y);
+    } else if (abs(x - PositionX) > 5){
+        gotoPositionX(x);
     }
 }
 
@@ -507,26 +524,47 @@ void bizhang(){
     }
 }
 void fangchujie(){
-    if (leftOut){
-        setWheel(-60, 60);
+    if (leftChuJie){
+        setWheel(30, -30);
     }
-    if (rightOut){
-        setWheel(60, -60);
-    }
-    if (topOut){
-        if (PositionX < 175){
-            setWheel(60, -60);
+    if (rightChuJie){
+        setWheel(-30, 30);
+    } else{
+        if (PositionX < 178){
+            if (PositionY > 126){
+                setWheel(-60, 60);
+            } else{
+                setWheel(60, -60);
+            }
+
         } else{
-            setWheel(-60, 60);
+            if (PositionY > 126){
+                setWheel(60, -60);
+            } else{
+                setWheel(-60, 60);
+            }
         }
     }
-    if (bottomOut){
-        if (PositionX < 175){
-            setWheel(-60, 60);
-        } else{
-            setWheel(60, -60);
-        }
-    }
+//    if (leftOut){
+//        setWheel(-60, 60);
+//    }
+//    if (rightOut){
+//        setWheel(60, -60);
+//    }
+//    if (topOut){
+//        if (PositionX < 175){
+//            setWheel(60, -60);
+//        } else{
+//            setWheel(-60, 60);
+//        }
+//    }
+//    if (bottomOut){
+//        if (PositionX < 175){
+//            setWheel(-60, 60);
+//        } else{
+//            setWheel(60, -60);
+//        }
+//    }
 }
 
 //todo 我的代码
@@ -537,7 +575,7 @@ void mycode(){
         redCount += 1;
         if (LoadedObjects >= 6){
             //todo 满载后，启动找存包区behavior
-            behavior = 1;
+            behavior = FIND_HONE;
         }
         return;
     } else if ((LeftQing || RightQing) && LoadedObjects < 6){
@@ -545,7 +583,7 @@ void mycode(){
         qingCount += 1;
         if (LoadedObjects >= 6){
             //todo 满载后，启动找存包区behavior
-            behavior = 1;
+            behavior = FIND_HONE;
         }
         return;
     } else if ((LeftHei || RightHei) && LoadedObjects < 6){
@@ -553,7 +591,7 @@ void mycode(){
         heiCount += 1;
         if (LoadedObjects >= 6){
             //todo 满载后，启动找存包区behavior
-            behavior = 1;
+            behavior = FIND_HONE;
         }
         return;
     }
@@ -562,7 +600,7 @@ void mycode(){
             depositState = 1;
             deposit();
         } else if (depositState == 2){
-            behavior = 2;
+            behavior = OUT_HOME;
             //todo behavior_离开存包区
             depositState = 0;
         }
@@ -584,9 +622,20 @@ void mycode(){
 }
 
 void behavior_FindHome(){
+    static int flag = 0;
+    static int px = 0;
+    static int py = 0;
+    if (!(pingBiQv)){
 
+    } else{
+        mycode();
+    }
 }
 
 void behavior_OutHome(){
+
+}
+
+void behavior_FindSuperObj(){
 
 }
