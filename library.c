@@ -333,7 +333,7 @@ void getTreasure(){
     LED_1 = 1;
     LoadedObjects++;
 }
-
+//todo 重写，范围太小，改成管道路径，或者弃用
 void turnTo270(){
     if (Compass > 267 && Compass < 273)
     {
@@ -447,6 +447,7 @@ void turnTo0(){
     }
 }
 
+//todo 重写goto方法
 void gotoPositionX(int x){
     if (abs(x - PositionX) > 5){
         if (PositionX < x){
@@ -523,6 +524,7 @@ void bizhang(){
         setWheel(45, 60);
     }
 }
+
 void fangchujie(){
     if (leftChuJie){
         setWheel(30, -30);
@@ -545,26 +547,6 @@ void fangchujie(){
             }
         }
     }
-//    if (leftOut){
-//        setWheel(-60, 60);
-//    }
-//    if (rightOut){
-//        setWheel(60, -60);
-//    }
-//    if (topOut){
-//        if (PositionX < 175){
-//            setWheel(60, -60);
-//        } else{
-//            setWheel(-60, 60);
-//        }
-//    }
-//    if (bottomOut){
-//        if (PositionX < 175){
-//            setWheel(-60, 60);
-//        } else{
-//            setWheel(60, -60);
-//        }
-//    }
 }
 
 //todo 我的代码
