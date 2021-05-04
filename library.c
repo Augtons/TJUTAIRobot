@@ -77,18 +77,30 @@ int heiCount = 0;
 int depositState = 0;//1 正在 2 结束
 
 int behavior = 0;
+enum directions{
+    DIRECTION_ADVANCE = 0,
+    DIRECTION_LEFT = 1,
+    DIRECTION_RIGHT = 2,
+};
 enum behaviors{
     FIND_HONE = 1,
-    OUT_HOME = 2,
-    FIND_SUPER_OBJ = 3,
+    OUT_HOME,
+    FIND_SUPER_OBJ,
+
+    CHU_JIE,
+    BI_ZHANG,
+    XIAN_JING,
 };
 
 void mycode();
 void gotoLocation(int x, int y);
+
 void behavior_FindHome();
 void behavior_OutHome();
 void behavior_FindSuperObj();
-
+void behavior_ChuJie();
+void behavior_BiZhang();
+void behavior_XianJing();
 
 int between(int val, int start, int end);
 
@@ -147,14 +159,14 @@ int between(int val, int start, int end);
 #define rightZhaoZe between(CSRight_R, 130, 185) && between(CSRight_G, 135, 186) && between(CSRight_B, 180, 255)
 #define zhaoze (leftZhaoZe && rightZhaoZe)
 
+//出界 新
 #define leftChuJie (CSLeft_R == 206 && CSLeft_G == 217 && CSLeft_B == 255)
 #define rightChuJie (CSRight_R == 206 && CSRight_G == 217 && CSRight_B == 255)
 #define chuJie (leftChuJie && rightChuJie)
 
 //空地
 #define isEmpty (!(frontHasBuilding)) && (!(leftHasBuilding)) && (!(rightHasBuilding)) && (!(leftXianjing)) && (!(rightXianjing)) && \
-        !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut)
-
+        !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut) && !(leftChuJie) && !(rightChuJie)
 
 DLL_EXPORT void SetGameID(int GameID)
 {
@@ -276,6 +288,18 @@ void Game1()
                 case OUT_HOME://存包结束，离开存包区
                     behavior_OutHome();
                     break;
+                case FIND_SUPER_OBJ:
+                    behavior_FindSuperObj();
+                    break;
+                case CHU_JIE:
+                    behavior_ChuJie();
+                    break;
+                case BI_ZHANG:
+                    behavior_BiZhang();
+                    break;
+                case XIAN_JING:
+                    behavior_XianJing();
+                    break;
             }
         } else{
             mycode();
@@ -316,6 +340,16 @@ int isNear(int px, int py){
 void setWheel(int left, int right){
     WheelLeft = left;
     WheelRight = right;
+}
+
+void setWheelWithTurn(int speed, int direction, int turnSpeed){
+    if (direction == DIRECTION_ADVANCE){
+        WheelLeft = speed;
+        WheelRight = speed;
+    } else if (direction == DIRECTION_LEFT){
+        WheelLeft = speed - turnSpeed / 2;
+        WheelRight = speed + turnSpeed / 2;
+    }
 }
 void deposit(){
     setWheel(0, 0);
@@ -551,7 +585,7 @@ void fangchujie(){
 
 //todo 我的代码
 void mycode(){
-//    正常情况下：寻宝，捡宝，避障，躲陷阱
+//    正常情况下：主行为
     if ((LeftRed || RightRed) && LoadedObjects < 6){
         getTreasure();
         redCount += 1;
@@ -587,37 +621,58 @@ void mycode(){
             depositState = 0;
         }
     }
-    if (!(pingBiQv)){
-        fangchujie();
+    if (leftChuJie || rightChuJie){
+        behavior = CHU_JIE;
+        return;
+    }
+    if (frontHasBuilding || leftHasBuilding || rightHasBuilding){
+        behavior = BI_ZHANG;
+        return;
+    }
+    if (leftXianjing || rightXianjing){
+        behavior = XIAN_JING;
+        return;
     }
     if (isEmpty) {
         LED_1 = 0;
         setWheel(60, 60);
-    } else {
-        if (frontHasBuilding || leftHasBuilding || rightHasBuilding){
-            bizhang();
-        }
-        if (leftXianjing || rightXianjing){
-            getOutOfXianjing();
-        }
     }
 }
 
 void behavior_FindHome(){
-    static int flag = 0;
-    static int px = 0;
-    static int py = 0;
-    if (!(pingBiQv)){
+    static int step = 0;
 
-    } else{
-        mycode();
-    }
+
+    behavior = 0;
 }
 
 void behavior_OutHome(){
+    static int step = 0;
 
+    behavior = 0;
 }
 
 void behavior_FindSuperObj(){
+    static int step = 0;
+
+    behavior = 0;
+
+}
+void behavior_ChuJie(){
+    static int step = 0;
+
+    behavior = 0;
+
+}
+void behavior_BiZhang(){
+    static int step = 0;
+
+    behavior = 0;
+
+}
+void behavior_XianJing(){
+    static int step = 0;
+
+    behavior = 0;
 
 }
