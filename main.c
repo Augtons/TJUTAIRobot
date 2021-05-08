@@ -44,6 +44,31 @@ int AI_SensorNum = 12;
 int AI_TeamID = 1; //Robot Team ID. 1:Blue Ream; 2:Red Team.
 
 #define CsBot_AI_C//DO NOT delete this line
+
+
+//枚举
+enum directions{
+    DIRECTION_ADVANCE = 0,
+    DIRECTION_LEFT = 1,
+    DIRECTION_RIGHT = 2,
+};
+enum behaviors{
+    FIND_HONE = 1,
+    OUT_HOME,
+    FIND_SUPER_OBJ,
+
+    CHU_JIE,
+    BI_ZHANG,
+    XIAN_JING,
+    FIRST_OUT_ZHAO_ZE,
+};
+enum GuanDao_Directions{
+    GuanDao_Horizontal_Left,
+    GuanDao_Horizontal_Right,
+    GuanDao_Vertical_Up,
+    GuanDao_Vertical_Down,
+};
+
 //我的变量
 int SuperLocationX = 0;
 int SuperLocationY = 0;
@@ -52,31 +77,41 @@ int red[6][2];
 int qing[6][2];
 int hei[6][2];
 
-int neededX = 0;
-int neededY = 0;
-
 int redCount = 0;
 int qingCount = 0;
 int heiCount = 0;
 
-
 int depositState = 0;//1 正在 2 结束
+int behavior = FIRST_OUT_ZHAO_ZE;
+int step = 0;
+int debug = 0;
 
-int behavior = 0;
-enum behaviors{
-    FIND_HONE = 1,
-    OUT_HOME = 2,
-    FIND_SUPER_OBJ = 3,
-};
 
+
+//函数声明
 void mycode();
-void gotoLocation(int x, int y);
+
+void guanDaoLuJing(int direction, int location, int width);
+
 void behavior_FindHome();
 void behavior_OutHome();
 void behavior_FindSuperObj();
-
+void behavior_ChuJie();
+void behavior_BiZhang();
+void behavior_XianJing();
+void behavior_FirstOutZhaoZe();
 
 int between(int val, int start, int end);
+int isNear(int px, int py);
+void setWheel(int left, int right);
+void setWheelWithTurn(int speed, int direction, int turnSpeed);
+void deposit();
+void getOutOfXianjing();
+void bizhang();
+void fangchujie();
+void getTreasure();
+void isThereTreasure();
+
 
 //屏蔽区
 #define pingBiQv between(PositionX, 0, 1) && between(PositionY, 0, 1)
@@ -133,14 +168,322 @@ int between(int val, int start, int end);
 #define rightZhaoZe between(CSRight_R, 130, 185) && between(CSRight_G, 135, 186) && between(CSRight_B, 180, 255)
 #define zhaoze (leftZhaoZe && rightZhaoZe)
 
+//出界 新
 #define leftChuJie (CSLeft_R == 206 && CSLeft_G == 217 && CSLeft_B == 255)
 #define rightChuJie (CSRight_R == 206 && CSRight_G == 217 && CSRight_B == 255)
 #define chuJie (leftChuJie && rightChuJie)
 
 //空地
 #define isEmpty (!(frontHasBuilding)) && (!(leftHasBuilding)) && (!(rightHasBuilding)) && (!(leftXianjing)) && (!(rightXianjing)) && \
-        !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut)
+        !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut) && !(leftChuJie) && !(rightChuJie)
 
+
+
+void Game1()
+{
+    //出现超级宝藏
+    if ((SuperObj_X != 0 || SuperObj_Y != 0) && SuperLocationX == 0 && SuperLocationY == 0){
+        SuperLocationX = SuperObj_X;
+        SuperLocationY = SuperObj_Y;
+        behavior = FIND_SUPER_OBJ;
+    }
+    if(Duration>0){
+        Duration--;
+    }
+    else {
+        if (depositState == 1){ // 正在存宝（但已结束）
+            depositState = 2;
+            LoadedObjects = 0;
+
+            redCount = 0;
+            qingCount = 0;
+            heiCount = 0;
+            behavior = 0;//将找存包区的1变回0
+        }
+        if (behavior != 0){
+            switch (behavior) {
+                case FIRST_OUT_ZHAO_ZE:
+                    behavior_FirstOutZhaoZe();//走出开始的沼泽
+                    break;
+                case FIND_HONE://满载，找存包区
+                    behavior_FindHome();
+                    break;
+                case OUT_HOME://存包结束，离开存包区
+                    behavior_OutHome();
+                    break;
+                case FIND_SUPER_OBJ:
+                    behavior_FindSuperObj();
+                    break;
+                case CHU_JIE:
+                    behavior_ChuJie();
+                    break;
+                case BI_ZHANG:
+                    behavior_BiZhang();
+                    break;
+                case XIAN_JING:
+                    behavior_XianJing();
+                    break;
+            }
+        } else{
+            mycode();
+        }
+    }
+
+}
+
+
+DLL_EXPORT void OnTimer()
+{
+    switch (CurGame)
+    {
+        case 9:
+            break;
+        case 10:
+            WheelLeft=0;
+            WheelRight=0;
+            //LED_1=0;
+            break;
+        case 1:
+            Game1();
+            break;
+        default:
+            break;
+    }
+}
+
+
+//todo 我的代码
+void mycode(){
+//    正常情况下：主行为
+    isThereTreasure();
+    if (isDeposit && LoadedObjects >= 6){
+        if (depositState == 0){
+            depositState = 1;
+            deposit();
+        } else if (depositState == 2){
+            behavior = OUT_HOME;
+            //todo behavior_离开存包区
+            depositState = 0;
+        }
+    }
+    if (leftChuJie || rightChuJie){
+        behavior = CHU_JIE;
+        return;
+    }
+    if (frontHasBuilding || leftHasBuilding || rightHasBuilding){
+        behavior = BI_ZHANG;
+        return;
+    }
+    if (leftXianjing || rightXianjing){
+        behavior = XIAN_JING;
+        return;
+    }
+    if (isEmpty) {
+        LED_1 = 0;
+        setWheel(60, 60);
+    }
+}
+
+void behavior_FindHome(){
+    
+
+
+    behavior = 0;
+}
+
+void behavior_OutHome(){
+    
+
+    behavior = 0;
+}
+
+void behavior_FindSuperObj(){
+    
+
+    behavior = 0;
+
+}
+void behavior_ChuJie(){
+    if (topOut){
+        setWheel(-100, -100);
+    }else{
+        behavior = 0;
+    }
+}
+void behavior_BiZhang(){
+    
+
+    behavior = 0;
+
+}
+void behavior_XianJing(){
+
+    behavior = 0;
+
+}
+
+void behavior_FirstOutZhaoZe(){
+    if(leftZhaoZe || rightZhaoZe){
+        setWheel(100, 100);
+    }else{
+        behavior = 0;
+    }
+}
+
+
+
+/**
+ * Debug 函数
+ */
+
+DLL_EXPORT char* GetDebugInfo()
+{
+    char info[3000];
+    sprintf(info, "WheelLeft=%d;WheelRight=%d;当前行为Behavior=%d;Duration=%d;存宝状态depositState=%d;调试参数Debug=%d;行为步骤step=%d"
+            , WheelLeft, WheelRight, behavior, Duration, depositState, debug, step);
+    return info;
+}
+
+/**
+ * 自定义函数
+ * 
+ */
+int between(int val, int start, int end){
+    return val >= min(start, end) && val <= max(start, end);
+}
+
+int isNear(int px, int py){
+    return abs(PositionY - py) <= 5 || abs(PositionX - px) <= 5;
+}
+
+void setWheel(int left, int right){
+    WheelLeft = left;
+    WheelRight = right;
+}
+
+void setWheelWithTurn(int speed, int direction, int turnSpeed){
+    if (direction == DIRECTION_ADVANCE){
+        WheelLeft = speed;
+        WheelRight = speed;
+    } else if (direction == DIRECTION_LEFT){
+        WheelLeft = speed - turnSpeed / 2;
+        WheelRight = speed + turnSpeed / 2;
+    } else if (direction == DIRECTION_RIGHT){
+        WheelLeft = speed + turnSpeed / 2;
+        WheelRight = speed - turnSpeed / 2;
+    }
+}
+void deposit(){
+    setWheel(0, 0);
+    Duration = 55;
+    LED_1 = 2;
+
+    depositState = 1;
+}
+
+void getTreasure(){
+    setWheel(0, 0);
+    Duration = 50;
+    LED_1 = 1;
+    LoadedObjects++;
+}
+
+
+//预计弃用
+void getOutOfXianjing(){
+    if (xianjing){
+        setWheel(-60, 60);
+    } else if (leftXianjing){
+        setWheel(60, -60);
+    } else if (rightXianjing){
+        setWheel(-60, 60);
+    }
+}
+
+void bizhang(){
+    if (frontHasBuilding){//前边有
+        if (leftHasBuilding && rightHasBuilding){
+            setWheel(-60, 60);
+        } else if (leftHasBuilding){
+            setWheel(60, -60);
+        } else {
+            setWheel(-60, 60);
+        }
+    } else if (leftHasBuilding && rightHasBuilding){
+        if (US_Left < US_Right){ //障碍物在左边近
+            setWheel(55, 50);
+        } else if (US_Left > US_Right){ //障碍物在右边近
+            setWheel(50, 55);
+        } else{
+            setWheel(55, 55);
+        }
+    } else if (leftHasBuilding){
+        setWheel(60, 45);
+    } else if (rightHasBuilding){
+        setWheel(45, 60);
+    }
+}
+
+void fangchujie(){
+    if (leftChuJie){
+        setWheel(30, -30);
+    }
+    if (rightChuJie){
+        setWheel(-30, 30);
+    } else{
+        if (PositionX < 178){
+            if (PositionY > 126){
+                setWheel(-60, 60);
+            } else{
+                setWheel(60, -60);
+            }
+
+        } else{
+            if (PositionY > 126){
+                setWheel(60, -60);
+            } else{
+                setWheel(-60, 60);
+            }
+        }
+    }
+}
+void isThereTreasure(){//是否有宝藏
+    if ((LeftRed || RightRed) && LoadedObjects < 6){
+        getTreasure();
+        redCount += 1;
+        if (LoadedObjects >= 6){
+            //todo 满载后，启动找存包区behavior
+            behavior = FIND_HONE;
+        }
+        return;
+    } else if ((LeftQing || RightQing) && LoadedObjects < 6){
+        getTreasure();
+        qingCount += 1;
+        if (LoadedObjects >= 6){
+            //todo 满载后，启动找存包区behavior
+            behavior = FIND_HONE;
+        }
+        return;
+    } else if ((LeftHei || RightHei) && LoadedObjects < 6){
+        getTreasure();
+        heiCount += 1;
+        if (LoadedObjects >= 6){
+            //todo 满载后，启动找存包区behavior
+            behavior = FIND_HONE;
+        }
+        return;
+    }
+}
+
+/**
+ * ====================================================================================
+ * 以下为系统函数 
+ * ====================================================================================
+ * ====================================================================================
+ * ====================================================================================
+ * ====================================================================================
+ * ====================================================================================
+ */
 
 DLL_EXPORT void SetGameID(int GameID)
 {
@@ -167,13 +510,7 @@ DLL_EXPORT int IsGameEnd()
 
 #ifndef CSBOT_REAL
 
-DLL_EXPORT char* GetDebugInfo()
-{
-    char info[3000];
-    sprintf(info, "WheelLeft=%d;WheelRight=%d;Behavior=%d;Duration=%d;depositState=%d;"
-            , WheelLeft, WheelRight, behavior, Duration, depositState);
-    return info;
-}
+
 
 DLL_EXPORT char* GetTeamName()
 {
@@ -234,376 +571,4 @@ DLL_EXPORT void GetCommand(int *AI_OUT)
     AI_OUT[0] = WheelLeft;
     AI_OUT[1] = WheelRight;
     AI_OUT[2] = LED_1;
-}
-
-void Game1()
-{
-    //出现超级宝藏
-    if ((SuperObj_X != 0 || SuperObj_Y != 0) && SuperLocationX == 0 && SuperLocationY == 0){
-        SuperLocationX = SuperObj_X;
-        SuperLocationY = SuperObj_Y;
-    }
-
-    if(Duration>0)
-    {
-        Duration--;
-    }
-    else{
-        if (depositState == 1){
-            depositState = 2;
-            LoadedObjects = 0;
-            behavior = 0;//将找存包区的1变回0
-        }
-        if (behavior != 0){
-            switch (behavior) {
-                case FIND_HONE://满载，找存包区
-                    behavior_FindHome();
-                    break;
-                case OUT_HOME://存包结束，离开存包区
-                    behavior_OutHome();
-                    break;
-            }
-        } else{
-            mycode();
-        }
-    }
-
-}
-
-
-DLL_EXPORT void OnTimer()
-{
-    switch (CurGame)
-    {
-        case 9:
-            break;
-        case 10:
-            WheelLeft=0;
-            WheelRight=0;
-            //LED_1=0;
-            break;
-        case 1:
-            //gotoLocation(56, 178);
-            Game1();
-            break;
-        default:
-            break;
-    }
-}
-
-int between(int val, int start, int end){
-    return val >= min(start, end) && val <= max(start, end);
-}
-
-int isNear(int px, int py){
-    return abs(PositionY - py) <= 5 || abs(PositionX - px) <= 5;
-}
-
-void setWheel(int left, int right){
-    WheelLeft = left;
-    WheelRight = right;
-}
-void deposit(){
-    setWheel(0, 0);
-    Duration = 55;
-    LED_1 = 2;
-
-    redCount = 0;
-    qingCount = 0;
-    heiCount = 0;
-    depositState = 1;
-}
-void getTreasure(){
-    setWheel(0, 0);
-    Duration = 50;
-    LED_1 = 1;
-    LoadedObjects++;
-}
-//todo 重写，范围太小，改成管道路径，或者弃用
-void turnTo270(){
-    if (Compass > 267 && Compass < 273)
-    {
-        WheelLeft = 0;
-        WheelRight = 0;
-        Duration = 0;
-    } else if (between(Compass, 90, 270)){
-        if (between(abs(Compass - 270), 180, 120)){
-            setWheel(-30, 30);
-        } else if (between(abs(Compass - 270), 120, 60)){
-            setWheel(-20, 20);
-        } else if (between(abs(Compass - 270), 60, 20)){
-            setWheel(-8, 8);
-        } else{
-            setWheel(-3, 3);
-        }
-    } else{
-        if (between(Compass, 90, 30)){
-            setWheel(30, -30);
-        } else if (Compass > 330 || Compass < 30){
-            setWheel(20, -20);
-        } else if (between(Compass, 330, 290)){
-            setWheel(8, -8);
-        } else{
-            setWheel(3, -3);
-        }
-    }
-}
-void turnTo90(){
-    if (Compass > 87 && Compass < 93)
-    {
-        WheelLeft = 0;
-        WheelRight = 0;
-        Duration = 0;
-    } else if (between(Compass, 90, 270)){
-        if (between(abs(Compass - 90), 180, 120)){
-            setWheel(30, -30);
-        } else if (between(abs(Compass - 90), 120, 60)){
-            setWheel(20, -20);
-        } else if (between(abs(Compass - 90), 60, 20)){
-            setWheel(8, -8);
-        } else{
-            setWheel(3, -3);
-        }
-    } else{
-        if (between(Compass, 270, 330)){
-            setWheel(-30, 30);
-        } else if (Compass > 330 || Compass < 30){
-            setWheel(-20, 20);
-        } else if (between(Compass, 30, 70)){
-            setWheel(-8, 8);
-        } else{
-            setWheel(-3, 3);
-        }
-    }
-}
-void turnTo180(){
-    if (Compass > 177 && Compass < 183)
-    {
-        WheelLeft = 0;
-        WheelRight = 0;
-        Duration = 0;
-    } else if (Compass > 180){
-        if (between(abs(180 - Compass), 180, 120)){
-            setWheel(30, -30);
-        } else if (between(abs(180 - Compass), 120, 60)){
-            setWheel(20, -20);
-        } else if (between(abs(180 - Compass), 60, 20)){
-            setWheel(8, -8);
-        } else{
-            setWheel(3, -3);
-        }
-    } else{
-        if (between(abs(180 - Compass), 180, 120)){
-            setWheel(-30, 30);
-        } else if (between(abs(180 - Compass), 120, 60)){
-            setWheel(-20, 20);
-        } else if (between(abs(180 - Compass), 60, 20)){
-            setWheel(-8, 8);
-        } else{
-            setWheel(-3, 3);
-        }
-    }
-}
-void turnTo0(){
-    if (Compass < 3 || Compass>357)
-    {
-        WheelLeft = 0;
-        WheelRight = 0;
-        Duration = 0;
-    } else if (Compass > 180){
-        if (between(abs(360 - Compass), 180, 120)){
-            setWheel(-30, 30);
-        } else if (between(abs(360 - Compass), 120, 60)){
-            setWheel(-20, 20);
-        } else if (between(abs(360 - Compass), 60, 20)){
-            setWheel(-8, 8);
-        } else{
-            setWheel(-3, 3);
-        }
-    } else {
-        if (between(Compass, 180, 120)){
-            setWheel(30, -30);
-        } else if (between(Compass, 120, 60)){
-            setWheel(20, -20);
-        } else if (between(Compass, 60, 20)){
-            setWheel(8, -8);
-        } else{
-            setWheel(3, -3);
-        }
-    }
-}
-
-//todo 重写goto方法
-void gotoPositionX(int x){
-    if (abs(x - PositionX) > 5){
-        if (PositionX < x){
-            if (!between(Compass, 267, 273)){
-                turnTo270();
-            } else {
-                setWheel(60, 60);
-            }
-        } else {
-            if (!between(Compass, 93, 87)){
-                turnTo90();
-            } else{
-                setWheel(60, 60);
-            }
-        }
-    } else{
-        setWheel(0, 0);
-    }
-}
-void gotoPositionY(int y){
-    if (abs(y - PositionX) > 5){
-        if (PositionY < y){
-            if (!(Compass >= 357 || Compass <= 3)){
-                turnTo0();
-            } else{
-                setWheel(60, 60);
-            }
-        } else{
-            if (!between(Compass, 183, 177)){
-                turnTo180();
-            } else setWheel(60, 60);
-        }
-    } else{
-        setWheel(0, 0);
-    }
-}
-void gotoLocation(int x, int y){
-    if (abs(y - PositionY) > 5){
-        gotoPositionY(y);
-    } else if (abs(x - PositionX) > 5){
-        gotoPositionX(x);
-    }
-}
-
-void getOutOfXianjing(){
-    if (xianjing){
-        setWheel(-60, 60);
-    } else if (leftXianjing){
-        setWheel(60, -60);
-    } else if (rightXianjing){
-        setWheel(-60, 60);
-    }
-}
-void bizhang(){
-    if (frontHasBuilding){//前边有
-        if (leftHasBuilding && rightHasBuilding){
-            setWheel(-60, 60);
-        } else if (leftHasBuilding){
-            setWheel(60, -60);
-        } else {
-            setWheel(-60, 60);
-        }
-    } else if (leftHasBuilding && rightHasBuilding){
-        if (US_Left < US_Right){ //障碍物在左边近
-            setWheel(55, 50);
-        } else if (US_Left > US_Right){ //障碍物在右边近
-            setWheel(50, 55);
-        } else{
-            setWheel(55, 55);
-        }
-    } else if (leftHasBuilding){
-        setWheel(60, 45);
-    } else if (rightHasBuilding){
-        setWheel(45, 60);
-    }
-}
-
-void fangchujie(){
-    if (leftChuJie){
-        setWheel(30, -30);
-    }
-    if (rightChuJie){
-        setWheel(-30, 30);
-    } else{
-        if (PositionX < 178){
-            if (PositionY > 126){
-                setWheel(-60, 60);
-            } else{
-                setWheel(60, -60);
-            }
-
-        } else{
-            if (PositionY > 126){
-                setWheel(60, -60);
-            } else{
-                setWheel(-60, 60);
-            }
-        }
-    }
-}
-
-//todo 我的代码
-void mycode(){
-//    正常情况下：寻宝，捡宝，避障，躲陷阱
-    if ((LeftRed || RightRed) && LoadedObjects < 6){
-        getTreasure();
-        redCount += 1;
-        if (LoadedObjects >= 6){
-            //todo 满载后，启动找存包区behavior
-            behavior = FIND_HONE;
-        }
-        return;
-    } else if ((LeftQing || RightQing) && LoadedObjects < 6){
-        getTreasure();
-        qingCount += 1;
-        if (LoadedObjects >= 6){
-            //todo 满载后，启动找存包区behavior
-            behavior = FIND_HONE;
-        }
-        return;
-    } else if ((LeftHei || RightHei) && LoadedObjects < 6){
-        getTreasure();
-        heiCount += 1;
-        if (LoadedObjects >= 6){
-            //todo 满载后，启动找存包区behavior
-            behavior = FIND_HONE;
-        }
-        return;
-    }
-    if (isDeposit && LoadedObjects >= 6){
-        if (depositState == 0){
-            depositState = 1;
-            deposit();
-        } else if (depositState == 2){
-            behavior = OUT_HOME;
-            //todo behavior_离开存包区
-            depositState = 0;
-        }
-    }
-    if (!(pingBiQv)){
-        fangchujie();
-    }
-    if (isEmpty) {
-        LED_1 = 0;
-        setWheel(60, 60);
-    } else {
-        if (frontHasBuilding || leftHasBuilding || rightHasBuilding){
-            bizhang();
-        }
-        if (leftXianjing || rightXianjing){
-            getOutOfXianjing();
-        }
-    }
-}
-
-void behavior_FindHome(){
-    static int flag = 0;
-    static int px = 0;
-    static int py = 0;
-    if (!(pingBiQv)){
-
-    } else{
-        mycode();
-    }
-}
-
-void behavior_OutHome(){
-
-}
-
-void behavior_FindSuperObj(){
-
 }
