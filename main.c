@@ -323,10 +323,27 @@ void behavior_XianJing(){
 }
 
 void behavior_FirstOutZhaoZe(){
-    if(leftZhaoZe || rightZhaoZe){
-        setWheel(100, 100);
-    }else{
-        behavior = 0;
+    if(step == 0){
+        if(leftZhaoZe || rightZhaoZe){
+            setWheel(100, 100);
+        }else {
+            setWheel(60, 60);
+            step = 1;
+        }
+    }else if(step == 1){
+        if(between(PositionY, 222, 232)){
+            step = 2;
+        }else {
+            setWheel(60, 60);
+        }
+    }else if(step == 2){
+        if(between(PositionX, 21, 31)){
+            step = 0;
+            behavior = 0;
+        }else {
+            guanDaoLuJing(GuanDao_Horizontal_Left, 227, 10);
+            isThereTreasure();
+        }
     }
 }
 
@@ -472,6 +489,81 @@ void isThereTreasure(){//是否有宝藏
             behavior = FIND_HONE;
         }
         return;
+    }
+}
+
+/**
+ * 管道路径 
+ * 
+ */
+void guanDaoLuJing(int direction, int location, int width){
+    if (direction == GuanDao_Horizontal_Left){
+        if(!between(Compass, 70, 110)){
+            if(between(Compass, 90, 270)){
+                setWheel(30, -30);
+            }else{
+                setWheel(-30, 30);
+            }
+        }else{
+            if (PositionY > (location + width/2) && !pingBiQv){
+                setWheel(50, 65);
+            }else if (PositionY < (location - width/2) && !pingBiQv){
+                setWheel(65, 50);
+            }else{
+                setWheel(60, 60);
+            }
+        }
+    }
+    else if(direction == GuanDao_Horizontal_Right){
+        if(!between(Compass, 250, 290)){
+            if(between(Compass, 90, 270)){
+                setWheel(-30, 30);
+            }else{
+                setWheel(30, -30);
+            }
+        }else{
+            if (PositionY > (location + width/2) && !pingBiQv){
+                setWheel(65, 50);
+            }else if (PositionY < (location - width/2) && !pingBiQv){
+                setWheel(50, 65);
+            }else{
+                setWheel(60, 60);
+            }
+        }
+    }
+    else if (direction == GuanDao_Vertical_Up){
+        if(between(Compass, 20, 340)){
+            if(Compass < 180){
+                setWheel(30, -30);
+            }else {
+                setWheel(-30, 30);
+            }
+        }else{
+            if (PositionX > (location + width/2) && !pingBiQv){
+                setWheel(50, 65);
+            }else if (PositionX < (location - width/2) && !pingBiQv){
+                setWheel(65, 50);
+            }else{
+                setWheel(60, 60);
+            }
+        }
+    }
+    else if(direction == GuanDao_Vertical_Down){
+        if(!between(Compass, 160, 200)){
+            if(Compass < 180){
+                setWheel(-30, 30);
+            }else {
+                setWheel(30, -30);
+            }
+        }else{
+            if ((PositionX > (location + width/2)) && !pingBiQv){
+                setWheel(65, 50);
+            }else if (PositionX < (location - width/2) && !pingBiQv){
+                setWheel(50, 65);
+            }else{
+                setWheel(60, 60);
+            }
+        }
     }
 }
 
