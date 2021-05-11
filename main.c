@@ -110,7 +110,7 @@ void getOutOfXianjing();
 void bizhang();
 void fangchujie();
 void getTreasure();
-void isThereTreasure();
+int isThereTreasure();
 
 
 //屏蔽区
@@ -118,54 +118,54 @@ void isThereTreasure();
 
 
 //放宝区
-#define LeftisDeposit CSLeft_R >= 224 && CSLeft_R <= 244 \
-        && CSLeft_G >= 85 && CSLeft_G <= 105 && CSLeft_B <= 20
-#define RightisDeposit CSRight_R >= 224 && CSRight_R <= 244 \
-        && CSRight_G >= 85 && CSRight_G <= 105 && CSRight_B <= 20
+#define LeftisDeposit (CSLeft_R >= 224 && CSLeft_R <= 244 \
+        && CSLeft_G >= 85 && CSLeft_G <= 105 && CSLeft_B <= 20)
+#define RightisDeposit (CSRight_R >= 224 && CSRight_R <= 244 \
+        && CSRight_G >= 85 && CSRight_G <= 105 && CSRight_B <= 20)
 #define isDeposit (LeftisDeposit && RightisDeposit)
 
 
 //红石
-#define LeftRed CSLeft_R == 255 && CSLeft_G >= 29 && CSLeft_G <=49 \
-        && CSLeft_B >= 29 && CSLeft_B <= 49
-#define RightRed CSRight_R == 255 && CSRight_G >= 29 && CSRight_G <=49 \
-        && CSRight_B >= 29 && CSRight_B <= 49
+#define LeftRed (CSLeft_R == 255 && CSLeft_G >= 29 && CSLeft_G <=49 \
+        && CSLeft_B >= 29 && CSLeft_B <= 49)
+#define RightRed (CSRight_R == 255 && CSRight_G >= 29 && CSRight_G <=49 \
+        && CSRight_B >= 29 && CSRight_B <= 49)
 
 
 //钻石
-#define LeftQing CSLeft_R >= 29 && CSLeft_R <= 49 && CSLeft_G == 255 && CSLeft_B == 255
-#define RightQing CSRight_R >= 29 && CSRight_R <= 49 && CSRight_G == 255 && CSRight_B == 255
+#define LeftQing (CSLeft_R >= 29 && CSLeft_R <= 49 && CSLeft_G == 255 && CSLeft_B == 255)
+#define RightQing (CSRight_R >= 29 && CSRight_R <= 49 && CSRight_G == 255 && CSRight_B == 255)
 
 
 //煤炭
-#define LeftHei CSLeft_R >= 29 && CSLeft_R <= 49 && CSLeft_G >= 29 && CSLeft_G <=49 \
-        && CSLeft_B >= 29 && CSLeft_B <= 49
-#define RightHei CSRight_R >= 29 && CSRight_R <= 49 && CSRight_G >= 29 && CSRight_G <=49 \
-        && CSRight_B >= 29 && CSRight_B <= 49
+#define LeftHei (CSLeft_R >= 29 && CSLeft_R <= 49 && CSLeft_G >= 29 && CSLeft_G <=49 \
+        && CSLeft_B >= 29 && CSLeft_B <= 49)
+#define RightHei (CSRight_R >= 29 && CSRight_R <= 49 && CSRight_G >= 29 && CSRight_G <=49 \
+        && CSRight_B >= 29 && CSRight_B <= 49)
 
 
 //障碍物
-#define frontHasBuilding US_Front <= 15
-#define leftHasBuilding US_Left <= 15
-#define rightHasBuilding US_Right <= 15
+#define frontHasBuilding (US_Front <= 15)
+#define leftHasBuilding (US_Left <= 15)
+#define rightHasBuilding (US_Right <= 15)
 
 
 //出界
-#define leftOut between(PositionX, 0, 10) && between(Compass, 0, 180)
-#define rightOut between(PositionX, 350, 1000) && between(Compass, 270, 359)
-#define bottomOut between(PositionY, 0, 10) && between(Compass, 90, 270)
+#define leftOut (between(PositionX, 0, 10) && between(Compass, 0, 180))
+#define rightOut (between(PositionX, 350, 1000) && between(Compass, 270, 359))
+#define bottomOut (between(PositionY, 0, 10) && between(Compass, 90, 270))
 #define topOut (between(PositionY, 260, 1000) && (between(Compass, 0, 90) || between(Compass, 270, 359)))
 
 
 //陷阱
-#define leftXianjing between(CSLeft_R, 204, 255) && between(CSLeft_G, 215, 255) && between(CSLeft_B, 0, 40)
-#define rightXianjing between(CSRight_R, 204, 255) && between(CSRight_G, 215, 255) && between(CSRight_B, 0, 40)
+#define leftXianjing (between(CSLeft_R, 204, 255) && between(CSLeft_G, 215, 255) && between(CSLeft_B, 0, 40))
+#define rightXianjing (between(CSRight_R, 204, 255) && between(CSRight_G, 215, 255) && between(CSRight_B, 0, 40))
 #define xianjing (leftXianjing && rightXianjing)
 
 
 //沼泽
-#define leftZhaoZe between(CSLeft_R, 130, 185) && between(CSLeft_G, 135, 186) && between(CSLeft_B, 180, 255)
-#define rightZhaoZe between(CSRight_R, 130, 185) && between(CSRight_G, 135, 186) && between(CSRight_B, 180, 255)
+#define leftZhaoZe (between(CSLeft_R, 130, 185) && between(CSLeft_G, 135, 186) && between(CSLeft_B, 180, 255))
+#define rightZhaoZe (between(CSRight_R, 130, 185) && between(CSRight_G, 135, 186) && between(CSRight_B, 180, 255))
 #define zhaoze (leftZhaoZe && rightZhaoZe)
 
 //出界 新
@@ -179,8 +179,7 @@ void isThereTreasure();
 
 
 
-void Game1()
-{
+void Game1(){
     //出现超级宝藏
     if ((SuperObj_X != 0 || SuperObj_Y != 0) && SuperLocationX == 0 && SuperLocationY == 0){
         SuperLocationX = SuperObj_X;
@@ -255,19 +254,10 @@ DLL_EXPORT void OnTimer()
 //todo 我的代码
 void mycode(){
 //    正常情况下：主行为
-    isThereTreasure();
-    if (isDeposit && LoadedObjects >= 6){
-        if (depositState == 0){
-            depositState = 1;
-            deposit();
-        } else if (depositState == 2){
-            behavior = OUT_HOME;
-            //todo behavior_离开存包区
-            depositState = 0;
-        }
-    }
+    
     if (leftChuJie || rightChuJie){
-        behavior = CHU_JIE;
+        fangchujie();
+        //behavior = CHU_JIE;
         return;
     }
     if (frontHasBuilding || leftHasBuilding || rightHasBuilding){
@@ -278,48 +268,91 @@ void mycode(){
         behavior = XIAN_JING;
         return;
     }
-    if (isEmpty) {
+    if (isEmpty && !isThereTreasure()) {
         LED_1 = 0;
         setWheel(60, 60);
     }
 }
 
 void behavior_FindHome(){
-    
+    // todo
+    if (isDeposit && LoadedObjects >= 6){
+        if (depositState == 0){
+            depositState = 1;
+            deposit();
+        } else if (depositState == 2){
+            behavior = OUT_HOME;
+            //todo behavior_离开存包区
+            depositState = 0;
+        }
+    }
 
-
+    step = 0;
     behavior = 0;
 }
 
 void behavior_OutHome(){
     
-
+    step = 0;
     behavior = 0;
 }
 
 void behavior_FindSuperObj(){
     
-
+    step = 0;
     behavior = 0;
 
 }
 void behavior_ChuJie(){
-    if (topOut){
-        setWheel(-100, -100);
+    if (0){ // 策略动作
+        //steps
+        //behavior = 0;
+        //step = 0;
     }else{
-        behavior = 0;
+        if (topOut || bottomOut || leftOut || rightOut){
+            fangchujie();
+        }else{
+            behavior = 0;
+        }
     }
 }
 void behavior_BiZhang(){
-    
 
-    behavior = 0;
+    if (0){ //策略条件
+        //策略动作 steps
 
+        step = 0;
+        behavior = 0;
+    }else{
+        if(frontHasBuilding || leftHasBuilding || rightHasBuilding){ //避障未完成
+            if(frontHasBuilding){
+                if(leftHasBuilding && rightHasBuilding){
+                    //倒车至左右无障碍物，或只有一侧有障碍物，然后转身
+                }else if(leftHasBuilding){
+                    //右转
+                }else if(rightHasBuilding){
+                    //
+                }else{ // 两侧都没有
+                    //右转或左转
+                }
+            }else {
+                if(leftHasBuilding && rightHasBuilding){
+                    //前进，且两侧距离障碍物的距离尽量保持一致
+                }else if(leftHasBuilding){
+                    //前进with右转
+                }else if(rightHasBuilding){
+                    //
+                }
+            }
+        }else{ //避障完成
+            behavior = 0;
+        }
+    }
 }
 void behavior_XianJing(){
-
+    
+    step = 0;
     behavior = 0;
-
 }
 
 void behavior_FirstOutZhaoZe(){
@@ -361,10 +394,17 @@ DLL_EXPORT char* GetDebugInfo()
     return info;
 }
 
-/**
+
+
+/**=============================================================
  * 自定义函数
- * 
+ * =============================================================
+ * ===============================================================
+ * ==============================================================
  */
+
+
+
 int between(int val, int start, int end){
     return val >= min(start, end) && val <= max(start, end);
 }
@@ -394,7 +434,6 @@ void deposit(){
     setWheel(0, 0);
     Duration = 55;
     LED_1 = 2;
-
     depositState = 1;
 }
 
@@ -442,10 +481,10 @@ void bizhang(){
 }
 
 void fangchujie(){
-    if (leftChuJie){
+    if (leftOut){
         setWheel(30, -30);
     }
-    if (rightChuJie){
+    if (rightOut){
         setWheel(-30, 30);
     } else{
         if (PositionX < 178){
@@ -464,7 +503,7 @@ void fangchujie(){
         }
     }
 }
-void isThereTreasure(){//是否有宝藏
+int isThereTreasure(){//是否有宝藏
     if ((LeftRed || RightRed) && LoadedObjects < 6){
         getTreasure();
         redCount += 1;
@@ -472,7 +511,7 @@ void isThereTreasure(){//是否有宝藏
             //todo 满载后，启动找存包区behavior
             behavior = FIND_HONE;
         }
-        return;
+        return true;
     } else if ((LeftQing || RightQing) && LoadedObjects < 6){
         getTreasure();
         qingCount += 1;
@@ -480,7 +519,7 @@ void isThereTreasure(){//是否有宝藏
             //todo 满载后，启动找存包区behavior
             behavior = FIND_HONE;
         }
-        return;
+        return true;
     } else if ((LeftHei || RightHei) && LoadedObjects < 6){
         getTreasure();
         heiCount += 1;
@@ -488,7 +527,9 @@ void isThereTreasure(){//是否有宝藏
             //todo 满载后，启动找存包区behavior
             behavior = FIND_HONE;
         }
-        return;
+        return true;
+    }else {
+        return false;
     }
 }
 
@@ -509,7 +550,7 @@ void guanDaoLuJing(int direction, int location, int width){
                 setWheel(50, 65);
             }else if (PositionY < (location - width/2) && !pingBiQv){
                 setWheel(65, 50);
-            }else{
+            }else{ // 位置合适，或者在信号屏蔽区，都保持直行
                 setWheel(60, 60);
             }
         }
@@ -526,7 +567,7 @@ void guanDaoLuJing(int direction, int location, int width){
                 setWheel(65, 50);
             }else if (PositionY < (location - width/2) && !pingBiQv){
                 setWheel(50, 65);
-            }else{
+            }else{// 位置合适，或者在信号屏蔽区，都保持直行
                 setWheel(60, 60);
             }
         }
@@ -543,7 +584,7 @@ void guanDaoLuJing(int direction, int location, int width){
                 setWheel(50, 65);
             }else if (PositionX < (location - width/2) && !pingBiQv){
                 setWheel(65, 50);
-            }else{
+            }else{// 位置合适，或者在信号屏蔽区，都保持直行
                 setWheel(60, 60);
             }
         }
@@ -560,7 +601,7 @@ void guanDaoLuJing(int direction, int location, int width){
                 setWheel(65, 50);
             }else if (PositionX < (location - width/2) && !pingBiQv){
                 setWheel(50, 65);
-            }else{
+            }else{// 位置合适，或者在信号屏蔽区，都保持直行
                 setWheel(60, 60);
             }
         }
