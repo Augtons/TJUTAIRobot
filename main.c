@@ -61,6 +61,7 @@ enum behaviors{
     BI_ZHANG,
     XIAN_JING,
     FIRST_OUT_ZHAO_ZE,
+    OUT_ZHAO_ZE,
 };
 enum GuanDao_Directions{
     GuanDao_Horizontal_Left,
@@ -86,6 +87,7 @@ int behavior = FIRST_OUT_ZHAO_ZE;
 int step = 0;
 int debug = 0;
 
+int posx = 0;//behavior 逃出陷阱，记录初始positionX的值
 
 
 //函数声明
@@ -100,6 +102,7 @@ void behavior_ChuJie();
 void behavior_BiZhang();
 void behavior_XianJing();
 void behavior_FirstOutZhaoZe();
+void behavior_OutZhaoZe();
 
 int between(int val, int start, int end);
 int isNear(int px, int py);
@@ -114,7 +117,7 @@ int isThereTreasure();
 
 
 //屏蔽区
-#define pingBiQv between(PositionX, 0, 1) && between(PositionY, 0, 1)
+#define pingBiQv (between(PositionX, 0, 1) && between(PositionY, 0, 1))
 
 
 //放宝区
@@ -151,10 +154,10 @@ int isThereTreasure();
 
 
 //出界
-#define leftOut (between(PositionX, 0, 10) && between(Compass, 0, 180))
-#define rightOut (between(PositionX, 350, 1000) && between(Compass, 270, 359))
-#define bottomOut (between(PositionY, 0, 10) && between(Compass, 90, 270))
-#define topOut (between(PositionY, 260, 1000) && (between(Compass, 0, 90) || between(Compass, 270, 359)))
+#define leftOut (between(PositionX, 0, 20) && between(Compass, 0, 180))
+#define rightOut (between(PositionX, 333, 370) && between(Compass, 180, 359))
+#define bottomOut (between(PositionY, 0, 20) && between(Compass, 90, 270))
+#define topOut (between(PositionY, 250, 300) && (between(Compass, 0, 90) || between(Compass, 270, 359)))
 
 
 //陷阱
@@ -169,13 +172,13 @@ int isThereTreasure();
 #define zhaoze (leftZhaoZe && rightZhaoZe)
 
 //出界 新
-#define leftChuJie (CSLeft_R == 206 && CSLeft_G == 217 && CSLeft_B == 255)
-#define rightChuJie (CSRight_R == 206 && CSRight_G == 217 && CSRight_B == 255)
-#define chuJie (leftChuJie && rightChuJie)
+// #define leftChuJie (CSLeft_R == 206 && CSLeft_G == 217 && CSLeft_B == 255)
+// #define rightChuJie (CSRight_R == 206 && CSRight_G == 217 && CSRight_B == 255)
+// #define chuJie (leftChuJie && rightChuJie)
 
 //空地
-#define isEmpty (!(frontHasBuilding)) && (!(leftHasBuilding)) && (!(rightHasBuilding)) && (!(leftXianjing)) && (!(rightXianjing)) && \
-        !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut) && !(leftChuJie) && !(rightChuJie)
+#define isEmpty ((!(frontHasBuilding)) && (!(leftHasBuilding)) && (!(rightHasBuilding)) && (!(leftXianjing)) && (!(rightXianjing)) && \
+        !(topOut) && !(bottomOut) && !(leftOut) && !(rightOut) && !(leftZhaoZe) && !(rightZhaoZe))
 
 
 
@@ -222,6 +225,9 @@ void Game1(){
                 case XIAN_JING:
                     behavior_XianJing();
                     break;
+                case OUT_ZHAO_ZE:
+                    behavior_OutZhaoZe();
+                    break;
             }
         } else{
             mycode();
@@ -254,11 +260,13 @@ DLL_EXPORT void OnTimer()
 //todo 我的代码
 void mycode(){
 //    正常情况下：主行为
-    
-    if (leftChuJie || rightChuJie){
+    if (!pingBiQv && (leftOut || rightOut || topOut || bottomOut)){
         fangchujie();
         //behavior = CHU_JIE;
         return;
+    }
+    if (leftZhaoZe || rightZhaoZe){
+        behavior = OUT_ZHAO_ZE;
     }
     if (frontHasBuilding || leftHasBuilding || rightHasBuilding){
         behavior = BI_ZHANG;
@@ -329,19 +337,19 @@ void behavior_BiZhang(){
                 if(leftHasBuilding && rightHasBuilding){
                     //倒车至左右无障碍物，或只有一侧有障碍物，然后转身
                 }else if(leftHasBuilding){
-                    //右转
+                    setWheel(30, -30);
                 }else if(rightHasBuilding){
-                    //
+                    setWheel(-30, 30);
                 }else{ // 两侧都没有
-                    //右转或左转
+                    setWheel(-30, 30);
                 }
             }else {
                 if(leftHasBuilding && rightHasBuilding){
                     //前进，且两侧距离障碍物的距离尽量保持一致
                 }else if(leftHasBuilding){
-                    //前进with右转
+                    setWheelWithTurn(45, DIRECTION_RIGHT, 10);
                 }else if(rightHasBuilding){
-                    //
+                    setWheelWithTurn(45, DIRECTION_LEFT, 10);
                 }
             }
         }else{ //避障完成
@@ -350,9 +358,58 @@ void behavior_BiZhang(){
     }
 }
 void behavior_XianJing(){
-    
-    step = 0;
-    behavior = 0;
+    // 上边陷阱
+    if (between(PositionY, 213, 195) || step != 0){
+        if (step == 0){
+            step = 1;
+        }
+        if (posx == 0){
+            posx = PositionX;
+        }
+        if(step == 1){
+            if (between(PositionY, 238 ,248)){
+                step = 2;
+                posx = 0;
+            }else{
+                guanDaoLuJing(GuanDao_Vertical_Up, posx, 10);
+                isThereTreasure();
+            }
+        }else if (step == 2){
+            if (1) {    //PositionX >= 180
+                if (!between(PositionX, 309, 319)){
+                    guanDaoLuJing(GuanDao_Horizontal_Right, 243, 10);
+                    isThereTreasure();
+                }else {
+                    step = 0;
+                    behavior = 0;
+                }
+            }
+            // else{
+            //     if (!between(PositionX, 21, 31)){
+            //         guanDaoLuJing(GuanDao_Horizontal_Right, 243, 10);
+            //         isThereTreasure();
+            //     }else {
+            //         step = 0;
+            //         behavior = 0;
+            //     }
+            // }
+        }
+        
+    }else if (PositionX <= 180 && step == 0){
+        if (leftXianjing || rightXianjing){
+            setWheel(-30, 30);
+        }else{
+            step = 0;
+            behavior = 0;
+        }
+    }else if (step == 0){
+        if (leftXianjing || rightXianjing){
+            setWheel(30, -30);
+        }else{
+            step = 0;
+            behavior = 0;
+        }
+    }
 }
 
 void behavior_FirstOutZhaoZe(){
@@ -380,7 +437,39 @@ void behavior_FirstOutZhaoZe(){
     }
 }
 
-
+void behavior_OutZhaoZe(){
+    if (between(PositionY, 213, 195) || step != 0){
+        if(step == 0){
+            step = 1;
+        }
+        if (step == 1){
+            if (!between(PositionY, 238, 248)){
+                setWheel(-70, -70);
+            }else {
+                step = 2;
+            }
+        }else if (step == 2){
+            if(!between(PositionX, 305, 315)){
+                guanDaoLuJing(GuanDao_Horizontal_Right, 227, 10);
+            }else {
+                step = 0;
+                behavior = 0;
+            }
+        }
+    } else if(PositionX < 180 && step == 0){
+        if(leftZhaoZe || rightZhaoZe){
+            setWheel(70, -70);
+        }else{
+            behavior = 0;
+        }
+    }else if (step == 0){
+        if(leftZhaoZe || rightZhaoZe){
+            setWheel(-70, 70);
+        }else{
+            behavior = 0;
+        }
+    }
+}
 
 /**
  * Debug 函数
@@ -389,8 +478,9 @@ void behavior_FirstOutZhaoZe(){
 DLL_EXPORT char* GetDebugInfo()
 {
     char info[3000];
-    sprintf(info, "WheelLeft=%d;WheelRight=%d;当前行为Behavior=%d;Duration=%d;存宝状态depositState=%d;调试参数Debug=%d;行为步骤step=%d"
-            , WheelLeft, WheelRight, behavior, Duration, depositState, debug, step);
+    sprintf(info, "WheelLeft=%d;WheelRight=%d;当前行为Behavior=%d;Duration=%d;存宝状态depositState=%d;调试参数Debug=%d;行为步骤step=%d;"
+    "右边出界=%d"
+            , WheelLeft, WheelRight, behavior, Duration, depositState, debug, step, rightOut);
     return info;
 }
 
@@ -486,20 +576,23 @@ void fangchujie(){
     }
     if (rightOut){
         setWheel(-30, 30);
-    } else{
-        if (PositionX < 178){
-            if (PositionY > 126){
-                setWheel(-60, 60);
-            } else{
-                setWheel(60, -60);
-            }
-
-        } else{
-            if (PositionY > 126){
-                setWheel(60, -60);
-            } else{
-                setWheel(-60, 60);
-            }
+    }
+    if (topOut){
+        if (PositionX > 180){
+            setWheel(-30, 30);
+            Duration = 2;
+        }else{
+            setWheel(30, -30);
+            Duration = 2;
+        }
+    }
+    if (bottomOut){
+        if (PositionX > 180){
+            setWheel(30, -30);
+            Duration = 2;
+        }else{
+            setWheel(-30, 30);
+            Duration = 2;
         }
     }
 }
