@@ -62,6 +62,7 @@ enum behaviors{
     XIAN_JING,
     FIRST_OUT_ZHAO_ZE,
     OUT_ZHAO_ZE,
+    OUT_UP,
 };
 enum GuanDao_Directions{
     GuanDao_Horizontal_Left,
@@ -103,6 +104,7 @@ void behavior_BiZhang();
 void behavior_XianJing();
 void behavior_FirstOutZhaoZe();
 void behavior_OutZhaoZe();
+void behavior_OutUP();
 
 int between(int val, int start, int end);
 int isNear(int px, int py);
@@ -155,7 +157,7 @@ int isThereTreasure();
 
 //出界
 #define leftOut (between(PositionX, 0, 20) && between(Compass, 0, 180))
-#define rightOut (between(PositionX, 333, 370) && between(Compass, 180, 359))
+#define rightOut (between(PositionX, 343, 370) && between(Compass, 180, 359))
 #define bottomOut (between(PositionY, 0, 20) && between(Compass, 90, 270))
 #define topOut (between(PositionY, 250, 300) && (between(Compass, 0, 90) || between(Compass, 270, 359)))
 
@@ -228,6 +230,9 @@ void Game1(){
                 case OUT_ZHAO_ZE:
                     behavior_OutZhaoZe();
                     break;
+                case OUT_UP:
+                    behavior_OutUP();
+                    break;
             }
         } else{
             mycode();
@@ -262,6 +267,15 @@ void mycode(){
 //    正常情况下：主行为
     if (!pingBiQv && (leftOut || rightOut || topOut || bottomOut)){
         fangchujie();
+        switch(behavior){
+            case FIND_HONE || FIND_SUPER_OBJ:
+                step = 0;
+                break;
+            case BI_ZHANG || XIAN_JING || OUT_ZHAO_ZE || OUT_HOME:
+                step = 0;
+                behavior = 0;
+                break;
+        }
         //behavior = CHU_JIE;
         return;
     }
@@ -294,7 +308,9 @@ void behavior_FindHome(){
             depositState = 0;
         }
     }
+    if(step == 0){
 
+    }
     step = 0;
     behavior = 0;
 }
@@ -324,6 +340,8 @@ void behavior_ChuJie(){
         }
     }
 }
+
+//重写
 void behavior_BiZhang(){
 
     if (0){ //策略条件
@@ -359,7 +377,7 @@ void behavior_BiZhang(){
 }
 void behavior_XianJing(){
     // 上边陷阱
-    if (between(PositionY, 213, 195) || step != 0){
+    if (between(PositionY, 213, 195) || step > 0){
         if (step == 0){
             step = 1;
         }
@@ -369,30 +387,32 @@ void behavior_XianJing(){
         if(step == 1){
             if (between(PositionY, 238 ,248)){
                 step = 2;
-                posx = 0;
             }else{
                 guanDaoLuJing(GuanDao_Vertical_Up, posx, 10);
                 isThereTreasure();
             }
         }else if (step == 2){
-            if (1) {    //PositionX >= 180
-                if (!between(PositionX, 309, 319)){
-                    guanDaoLuJing(GuanDao_Horizontal_Right, 243, 10);
-                    isThereTreasure();
-                }else {
+            if (!between(PositionX, 309, 319)){
+                guanDaoLuJing(GuanDao_Horizontal_Right, 243, 10);
+                isThereTreasure();
+            }else {
+                if(posx <= 180){
                     step = 0;
                     behavior = 0;
+                    posx = 0;
+                }else{
+                    step = 3;
                 }
             }
-            // else{
-            //     if (!between(PositionX, 21, 31)){
-            //         guanDaoLuJing(GuanDao_Horizontal_Right, 243, 10);
-            //         isThereTreasure();
-            //     }else {
-            //         step = 0;
-            //         behavior = 0;
-            //     }
-            // }
+        }else if(step == 3){
+            if(PositionY > 117){
+                guanDaoLuJing(GuanDao_Vertical_Down, 314, 5);
+                isThereTreasure();
+            }else{
+                posx = 0;
+                step = 0;
+                behavior = 0;
+            }
         }
         
     }else if (PositionX <= 180 && step == 0){
@@ -471,6 +491,10 @@ void behavior_OutZhaoZe(){
     }
 }
 
+void behavior_OutUP(){
+
+}
+
 /**
  * Debug 函数
  */
@@ -479,8 +503,8 @@ DLL_EXPORT char* GetDebugInfo()
 {
     char info[3000];
     sprintf(info, "WheelLeft=%d;WheelRight=%d;当前行为Behavior=%d;Duration=%d;存宝状态depositState=%d;调试参数Debug=%d;行为步骤step=%d;"
-    "右边出界=%d"
-            , WheelLeft, WheelRight, behavior, Duration, depositState, debug, step, rightOut);
+    "posx=%d;"
+            , WheelLeft, WheelRight, behavior, Duration, depositState, debug, step, posx);
     return info;
 }
 
@@ -525,6 +549,8 @@ void deposit(){
     Duration = 55;
     LED_1 = 2;
     depositState = 1;
+    step = 0;
+    behavior = 0;
 }
 
 void getTreasure(){
